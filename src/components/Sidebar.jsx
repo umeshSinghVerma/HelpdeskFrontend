@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import axios from 'axios'
 // Initialization for ES Users
 import {
     Sidenav,
@@ -37,12 +38,88 @@ function timebasedindex() {
 
 
 
-
-export default function Sidebar({ Blog, setBlog }) {
+export default function Sidebar() {
+    const urlParams = useParams();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [editBlogNames, setEditBlogNames] = useState(null);
-    console.log("blog came in sidebar",Blog)
+    const [Blog, setBlog] = useState([]);
+
+    useEffect(() => {
+        const getAllBlogs = async () => {
+            try {
+                const response = await axios.get("http://localhost:8080/helpdesk/allBlogs");
+                console.log(response.data);
+                const data = await response.data;
+                let finalObject = {};
+                for (const obj of data) {
+                    finalObject[obj.blogindex] = {
+                        blogindex: obj.blogindex,
+                        blogHeading: obj.blogHeading,
+                        blogMenus: {}
+                    }
+                }
+                setBlog(finalObject);
+            }
+            catch (error) {
+                console.log(error.message);
+            }
+        }
+        getAllBlogs();
+    }, [])
+
+    const CreateBlog = async (blog) => {
+        try {
+            const sentArray = [blog, Object.keys(Blog)];
+            console.log("sentArray", sentArray);
+            const response = await axios.post('http://localhost:8080/helpdesk/addBlog', sentArray);
+            const CreatedBlog = await response.data;
+            console.log("response", response);
+            const blogindex = CreatedBlog.blogindex;
+            const blogHeading = CreatedBlog.blogHeading;
+            if (response.status === 200) {
+                setBlog(prevBlogs => {
+                    return (
+                        { ...prevBlogs, [blogindex]: { ...prevBlogs[blogindex], blogindex: blogindex, blogHeading: blogHeading, blogMenus: {} } }
+                    )
+                })
+            } else {
+                setBlog(prevBlogs => {
+                    const blogindex = CreatedBlog[0].blogindex;
+                    const blogHeading = CreatedBlog[0].blogHeading;
+                    const newObject = { ...prevBlogs };
+                    const incomingBlogs = CreatedBlog[1];
+                    for (const obj in incomingBlogs) {
+                        console.log("this is obj", incomingBlogs[obj])
+                        newObject[incomingBlogs[obj].blogindex] = { blogindex: incomingBlogs[obj].blogindex, blogHeading: incomingBlogs[obj].blogHeading, blogMenus: incomingBlogs[obj]?.blogMenus || {} }
+                    }
+                    return (
+                        { [blogindex]: { ...prevBlogs[blogindex], blogindex: blogindex, blogHeading: blogHeading }, ...newObject }
+                    )
+                })
+
+            }
+        }
+        catch (error) {
+            console.log(error.message);
+        }
+    }
+
+    const DeleteBlog = async (index) => {
+        try {
+            const response = await axios.delete(`http://localhost:8080/helpdesk/${index}/deleteBlog`);
+            if (response.status === 200) {
+                const data = await response.data;
+                setBlog(data);
+            }
+        }
+        catch (error) {
+            console.log(error.message);
+        }
+    }
+    window.blog = Blog;
+
+
     useEffect(() => {
         initTE({ Sidenav, Ripple })
     }, [])
@@ -50,10 +127,10 @@ export default function Sidebar({ Blog, setBlog }) {
         <div className='flex'>
             <nav
                 id="sidenav-8"
-                className="absolute left-0 top-0 z-[1035] h-full w-60 -translate-x-full overflow-hidden bg-white shadow-[0_4px_12px_0_rgba(0,0,0,0.07),_0_2px_4px_rgba(0,0,0,0.05)] data-[te-sidenav-hidden='false']:translate-x-0 dark:bg-slate-800"
+                className="fixed left-0 top-0 z-[1035] h-full w-60 -translate-x-full overflow-hidden bg-white shadow-[0_4px_12px_0_rgba(0,0,0,0.07),_0_2px_4px_rgba(0,0,0,0.05)] data-[te-sidenav-hidden='false']:translate-x-0 dark:bg-slate-800"
                 data-te-sidenav-init=""
                 data-te-sidenav-hidden="true"
-                data-te-sidenav-position="absolute"
+                data-te-sidenav-position="fixed"
                 data-te-sidenav-accordion="true"
             >
                 <a
@@ -112,11 +189,16 @@ export default function Sidebar({ Blog, setBlog }) {
                                 onClick={() => {
                                     let value = document.getElementById('create-website-input').value;
                                     if (value !== "") {
+                                        let index = timebasedindex();
                                         setBlog((prevobj) => {
-                                            let index = timebasedindex();
                                             return (
                                                 { [index]: { blogindex: index, blogHeading: value, ...prevobj[index] }, ...prevobj }
                                             )
+                                        })
+
+                                        CreateBlog({
+                                            blogindex: index,
+                                            blogHeading: value
                                         })
                                     }
                                     document.getElementById('create-website-input').value = "";
@@ -133,7 +215,7 @@ export default function Sidebar({ Blog, setBlog }) {
                         </span>
                     </li>
                     {
-                        Blog!==[] && Object.values(Blog).map((item, key) => {
+                        Blog !== [] && Object.values(Blog).map((item, key) => {
                             const index = item.blogindex;
                             return (
                                 <li key={key} id={`${item.blogindex}sidebarBlogContainer`} className="relative flex">
@@ -143,7 +225,7 @@ export default function Sidebar({ Blog, setBlog }) {
 
                                     >
                                         <span className="flex-none mr-4 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-white-400 dark:[&>svg]:text-white-300 dark:fill-gray-100 fill-gray-500">
-                                            <svg xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 512 445.91"><path d="M34.67 0h442.66C496.42 0 512 15.58 512 34.67v376.57c0 19.04-15.58 34.67-34.67 34.67H34.67C15.59 445.91 0 430.32 0 411.24V34.67C0 15.58 15.59 0 34.67 0zm34.97 115.76h372.72c9.43 0 17.13 7.74 17.13 17.13v182.02c0 9.39-7.75 17.13-17.13 17.13H69.64c-9.39 0-17.14-7.72-17.14-17.13V132.89c0-9.41 7.71-17.13 17.14-17.13zm186.35 27.46c44.56 0 80.68 36.12 80.68 80.68 0 44.56-36.12 80.68-80.68 80.68-44.55 0-80.67-36.12-80.67-80.68 0-44.56 36.12-80.68 80.67-80.68zm-4.53 36.34v-20.85c-7.16 6.37-13.99 13.3-19.91 20.85h19.91zm66.83 79.57c5.35-9.6 8.49-19.7 9.09-30.73h-19.74c-.55 10.89-3.89 21.18-9.1 30.72l19.75.01zm-6 9.11h-19.38c-6.73 9.68-15.15 18.3-24.02 26.03 17.21-3.15 32.5-12.34 43.4-26.03zm-69.15 26.01c-8.88-7.69-17.28-16.36-24.01-26.01H199.8c11.03 13.86 26.18 22.84 43.34 26.01zm-49.44-35.08h19.75c-5.18-9.5-8.56-19.87-9.1-30.73h-19.73c.68 11.19 3.67 20.98 9.08 30.73zm-9.1-39.8h19.94c.96-10.91 4.7-21.22 10.03-30.73H193.7c-5.37 9.64-8.5 19.77-9.1 30.73zm15.11-39.81h20.61c6.74-9.6 14.89-18.29 23.53-26.19-17.59 3.06-33 12.25-44.14 26.19zm68.5-26.13c8.65 7.88 16.77 16.53 23.46 26.13h20.57c-11.05-13.84-26.55-23.13-44.03-26.13zm50.07 35.21h-20.86c5.32 9.48 9.07 19.85 10.03 30.73h19.92c-.74-11.17-3.6-21.01-9.09-30.73zm-57.75-29.93v20.85h19.91c-5.92-7.55-12.74-14.48-19.91-20.85zm0 29.93v30.73h37.83c-1.15-11.06-5.57-21.41-11.49-30.73h-26.34zm0 39.8v30.73h27.53c5.87-9.38 9.83-19.61 10.5-30.73h-38.03zm0 39.8v21.24c7.63-6.43 14.86-13.43 21.08-21.24h-21.08zm-9.07 21.24v-21.24h-21.09c6.18 7.81 13.46 14.85 21.09 21.24zm0-30.31v-30.73h-38.03c.68 11.12 4.65 21.33 10.5 30.73h27.53zm0-39.8v-30.73h-26.35c-5.92 9.32-10.33 19.67-11.48 30.73h37.83zM491.54 83.75H22.04v330.87a9.53 9.53 0 0 0 9.58 9.58h450.17c5.33 0 9.59-4.29 9.59-9.59V83.75h.16zm-47.21-53.67c9.46 0 17.13 7.67 17.13 17.13 0 9.46-7.67 17.12-17.13 17.12-9.45 0-17.12-7.66-17.12-17.12s7.71-17.13 17.12-17.13zm-116 0c9.46 0 17.13 7.67 17.13 17.13 0 9.46-7.67 17.12-17.13 17.12-9.46 0-17.12-7.66-17.12-17.12s7.66-17.13 17.12-17.13zm58 0c9.46 0 17.13 7.67 17.13 17.13 0 9.46-7.67 17.12-17.13 17.12-9.45 0-17.12-7.66-17.12-17.12s7.67-17.13 17.12-17.13zm-107.7 360.86c-7.42 0-13.42-6.54-13.42-14.58 0-8.08 6-14.58 13.42-14.58h165.2c7.42 0 13.42 6.54 13.42 14.58s-6 14.58-13.42 14.58h-165.2zm-216.3 0c-7.33 0-13.29-6.54-13.29-14.58 0-8.08 5.96-14.58 13.29-14.58H215.5c7.33 0 13.29 6.54 13.29 14.58s-5.96 14.58-13.29 14.58H62.33z" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" shapeRendering="geometricPrecision" textRendering="geometricPrecision" imageRendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 512 445.91"><path d="M34.67 0h442.66C496.42 0 512 15.58 512 34.67v376.57c0 19.04-15.58 34.67-34.67 34.67H34.67C15.59 445.91 0 430.32 0 411.24V34.67C0 15.58 15.59 0 34.67 0zm34.97 115.76h372.72c9.43 0 17.13 7.74 17.13 17.13v182.02c0 9.39-7.75 17.13-17.13 17.13H69.64c-9.39 0-17.14-7.72-17.14-17.13V132.89c0-9.41 7.71-17.13 17.14-17.13zm186.35 27.46c44.56 0 80.68 36.12 80.68 80.68 0 44.56-36.12 80.68-80.68 80.68-44.55 0-80.67-36.12-80.67-80.68 0-44.56 36.12-80.68 80.67-80.68zm-4.53 36.34v-20.85c-7.16 6.37-13.99 13.3-19.91 20.85h19.91zm66.83 79.57c5.35-9.6 8.49-19.7 9.09-30.73h-19.74c-.55 10.89-3.89 21.18-9.1 30.72l19.75.01zm-6 9.11h-19.38c-6.73 9.68-15.15 18.3-24.02 26.03 17.21-3.15 32.5-12.34 43.4-26.03zm-69.15 26.01c-8.88-7.69-17.28-16.36-24.01-26.01H199.8c11.03 13.86 26.18 22.84 43.34 26.01zm-49.44-35.08h19.75c-5.18-9.5-8.56-19.87-9.1-30.73h-19.73c.68 11.19 3.67 20.98 9.08 30.73zm-9.1-39.8h19.94c.96-10.91 4.7-21.22 10.03-30.73H193.7c-5.37 9.64-8.5 19.77-9.1 30.73zm15.11-39.81h20.61c6.74-9.6 14.89-18.29 23.53-26.19-17.59 3.06-33 12.25-44.14 26.19zm68.5-26.13c8.65 7.88 16.77 16.53 23.46 26.13h20.57c-11.05-13.84-26.55-23.13-44.03-26.13zm50.07 35.21h-20.86c5.32 9.48 9.07 19.85 10.03 30.73h19.92c-.74-11.17-3.6-21.01-9.09-30.73zm-57.75-29.93v20.85h19.91c-5.92-7.55-12.74-14.48-19.91-20.85zm0 29.93v30.73h37.83c-1.15-11.06-5.57-21.41-11.49-30.73h-26.34zm0 39.8v30.73h27.53c5.87-9.38 9.83-19.61 10.5-30.73h-38.03zm0 39.8v21.24c7.63-6.43 14.86-13.43 21.08-21.24h-21.08zm-9.07 21.24v-21.24h-21.09c6.18 7.81 13.46 14.85 21.09 21.24zm0-30.31v-30.73h-38.03c.68 11.12 4.65 21.33 10.5 30.73h27.53zm0-39.8v-30.73h-26.35c-5.92 9.32-10.33 19.67-11.48 30.73h37.83zM491.54 83.75H22.04v330.87a9.53 9.53 0 0 0 9.58 9.58h450.17c5.33 0 9.59-4.29 9.59-9.59V83.75h.16zm-47.21-53.67c9.46 0 17.13 7.67 17.13 17.13 0 9.46-7.67 17.12-17.13 17.12-9.45 0-17.12-7.66-17.12-17.12s7.71-17.13 17.12-17.13zm-116 0c9.46 0 17.13 7.67 17.13 17.13 0 9.46-7.67 17.12-17.13 17.12-9.46 0-17.12-7.66-17.12-17.12s7.66-17.13 17.12-17.13zm58 0c9.46 0 17.13 7.67 17.13 17.13 0 9.46-7.67 17.12-17.13 17.12-9.45 0-17.12-7.66-17.12-17.12s7.67-17.13 17.12-17.13zm-107.7 360.86c-7.42 0-13.42-6.54-13.42-14.58 0-8.08 6-14.58 13.42-14.58h165.2c7.42 0 13.42 6.54 13.42 14.58s-6 14.58-13.42 14.58h-165.2zm-216.3 0c-7.33 0-13.29-6.54-13.29-14.58 0-8.08 5.96-14.58 13.29-14.58H215.5c7.33 0 13.29 6.54 13.29 14.58s-5.96 14.58-13.29 14.58H62.33z" /></svg>
                                         </span>
 
                                         {editBlogNames === index ?
@@ -153,19 +235,29 @@ export default function Sidebar({ Blog, setBlog }) {
                                                         // console.log(e.key);
                                                         if (e.target.value !== "") {
                                                             // console.log(index)
-                                                            console.log(Blog[index]);
+                                                            // console.log(Blog[index]);
+                                                            CreateBlog({
+                                                                blogindex: index,
+                                                                blogHeading: e.target.value
+                                                            })
                                                             setBlog((prevobj) => {
                                                                 return (
                                                                     { ...prevobj, [index]: { ...prevobj[index], blogindex: index, blogHeading: e.target.value } }
                                                                 )
                                                             })
+
                                                         }
                                                         setEditBlogNames(null);
+
                                                     }
                                                 }} onBlur={(e) => {
                                                     if (e.target.value !== "") {
                                                         // console.log(index)
-                                                        console.log(Blog[index]);
+                                                        // console.log(Blog[index]);
+                                                        CreateBlog({
+                                                            blogindex: index,
+                                                            blogHeading: e.target.value
+                                                        })
                                                         setBlog((prevobj) => {
                                                             return (
                                                                 { ...prevobj, [index]: { ...prevobj[index], blogindex: index, blogHeading: e.target.value } }
@@ -182,22 +274,24 @@ export default function Sidebar({ Blog, setBlog }) {
                                             </button>}
 
                                         <button id={`${item.blogindex}sidebarBlogContainer-deleteBtn`} className='flex flex-none items-center' onClick={() => {
+                                            console.log("urlparama blogid",urlParams.Blogid,index);
+                                            if (urlParams.Blogid == index) {
+                                                navigate("/");
+                                            }
+                                            DeleteBlog(index);
                                             const newBlog = { ...Blog };
-                                            console.log(newBlog);
                                             delete (newBlog[index]);
-                                            console.log(index);
-                                            console.log(newBlog);
                                             setBlog(newBlog);
                                         }}>
                                             <span className="mr-4 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-gray-400 dark:[&>svg]:text-gray-300 dark:fill-gray-100 fill-gray-500">
-                                                <svg xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 456 511.82"><path d="M48.42 140.13h361.99c17.36 0 29.82 9.78 28.08 28.17l-30.73 317.1c-1.23 13.36-8.99 26.42-25.3 26.42H76.34c-13.63-.73-23.74-9.75-25.09-24.14L20.79 168.99c-1.74-18.38 9.75-28.86 27.63-28.86zM24.49 38.15h136.47V28.1c0-15.94 10.2-28.1 27.02-28.1h81.28c17.3 0 27.65 11.77 27.65 28.01v10.14h138.66c.57 0 1.11.07 1.68.13 10.23.93 18.15 9.02 18.69 19.22.03.79.06 1.39.06 2.17v42.76c0 5.99-4.73 10.89-10.62 11.19-.54 0-1.09.03-1.63.03H11.22c-5.92 0-10.77-4.6-11.19-10.38 0-.72-.03-1.47-.03-2.23v-39.5c0-10.93 4.21-20.71 16.82-23.02 2.53-.45 5.09-.37 7.67-.37zm83.78 208.38c-.51-10.17 8.21-18.83 19.53-19.31 11.31-.49 20.94 7.4 21.45 17.57l8.7 160.62c.51 10.18-8.22 18.84-19.53 19.32-11.32.48-20.94-7.4-21.46-17.57l-8.69-160.63zm201.7-1.74c.51-10.17 10.14-18.06 21.45-17.57 11.32.48 20.04 9.14 19.53 19.31l-8.66 160.63c-.52 10.17-10.14 18.05-21.46 17.57-11.31-.48-20.04-9.14-19.53-19.32l8.67-160.62zm-102.94.87c0-10.23 9.23-18.53 20.58-18.53 11.34 0 20.58 8.3 20.58 18.53v160.63c0 10.23-9.24 18.53-20.58 18.53-11.35 0-20.58-8.3-20.58-18.53V245.66z" /></svg>
+                                                <svg xmlns="http://www.w3.org/2000/svg" shapeRendering="geometricPrecision" textRendering="geometricPrecision" imageRendering="optimizeQuality" fillRule="evenodd" clipRule="evenodd" viewBox="0 0 456 511.82"><path d="M48.42 140.13h361.99c17.36 0 29.82 9.78 28.08 28.17l-30.73 317.1c-1.23 13.36-8.99 26.42-25.3 26.42H76.34c-13.63-.73-23.74-9.75-25.09-24.14L20.79 168.99c-1.74-18.38 9.75-28.86 27.63-28.86zM24.49 38.15h136.47V28.1c0-15.94 10.2-28.1 27.02-28.1h81.28c17.3 0 27.65 11.77 27.65 28.01v10.14h138.66c.57 0 1.11.07 1.68.13 10.23.93 18.15 9.02 18.69 19.22.03.79.06 1.39.06 2.17v42.76c0 5.99-4.73 10.89-10.62 11.19-.54 0-1.09.03-1.63.03H11.22c-5.92 0-10.77-4.6-11.19-10.38 0-.72-.03-1.47-.03-2.23v-39.5c0-10.93 4.21-20.71 16.82-23.02 2.53-.45 5.09-.37 7.67-.37zm83.78 208.38c-.51-10.17 8.21-18.83 19.53-19.31 11.31-.49 20.94 7.4 21.45 17.57l8.7 160.62c.51 10.18-8.22 18.84-19.53 19.32-11.32.48-20.94-7.4-21.46-17.57l-8.69-160.63zm201.7-1.74c.51-10.17 10.14-18.06 21.45-17.57 11.32.48 20.04 9.14 19.53 19.31l-8.66 160.63c-.52 10.17-10.14 18.05-21.46 17.57-11.31-.48-20.04-9.14-19.53-19.32l8.67-160.62zm-102.94.87c0-10.23 9.23-18.53 20.58-18.53 11.34 0 20.58 8.3 20.58 18.53v160.63c0 10.23-9.24 18.53-20.58 18.53-11.35 0-20.58-8.3-20.58-18.53V245.66z" /></svg>
                                             </span>
 
                                         </button>
                                         <button className='flex flex-none items-center' onClick={() => {
                                             setEditBlogNames(index);
                                         }}>
-                                            {editBlogNames === index ? "":
+                                            {editBlogNames === index ? "" :
                                                 <span className="mr-4 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-gray-400 dark:[&>svg]:text-gray-300 dark:fill-gray-100 fill-gray-500">
                                                     <svg xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 0 122.88 122.88" ><path class="st0" d="M79.7,31.87c-0.7-0.65-1.5-1-2.4-0.95c-0.9,0-1.7,0.35-2.35,1.05l-5.29,5.49L84.49,51.8l5.34-5.59 c0.65-0.65,0.9-1.5,0.9-2.4c0-0.9-0.35-1.75-1-2.35L79.7,31.87L79.7,31.87L79.7,31.87z M12.51,0h97.85c3.44,0,6.57,1.41,8.84,3.67 c2.27,2.27,3.67,5.4,3.67,8.84v97.85c0,3.44-1.41,6.57-3.67,8.84c-2.27,2.27-5.4,3.67-8.84,3.67H12.51c-3.44,0-6.57-1.41-8.84-3.67 c-2.27-2.27-3.67-5.4-3.67-8.84V12.51c0-3.44,1.41-6.57,3.67-8.84C5.94,1.41,9.07,0,12.51,0L12.51,0z M110.37,5.39H12.51 c-1.96,0-3.74,0.8-5.03,2.1c-1.29,1.29-2.1,3.08-2.1,5.03v97.85c0,1.96,0.8,3.74,2.1,5.03c1.29,1.29,3.08,2.1,5.03,2.1h97.85 c1.96,0,3.74-0.8,5.03-2.1c1.29-1.29,2.1-3.08,2.1-5.03V12.51c0-1.96-0.8-3.74-2.1-5.03C114.1,6.19,112.32,5.39,110.37,5.39 L110.37,5.39z M51.93,85.61c-1.95,0.65-3.95,1.25-5.89,1.9c-1.95,0.65-3.9,1.3-5.89,1.95c-4.64,1.5-7.19,2.35-7.74,2.5 c-0.55,0.15-0.2-2,0.95-6.49l3.7-14.13l0.3-0.32L51.93,85.61L51.93,85.61L51.93,85.61L51.93,85.61z M42.74,65.41l22.9-23.78 l14.83,14.28L57.33,79.99L42.74,65.41L42.74,65.41z" /></svg>
                                                 </span>}

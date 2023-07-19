@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import DarkMode from "./DarkMode";
 import Sidebar from "./Sidebar";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import DarkModeContext from "../Contexts/DarkmodeContext";
+import Loader from "./Loader"
+import axios from "axios";
 function timebasedindex() {
     let date = new Date();
     let millisec = date.getMilliseconds();
@@ -99,7 +102,7 @@ export default function Navbar({ blogData, setBlogData }) {
     const [searchParams, setSearchParams] = useSearchParams();
     const [showCreateMenu, setShowCreateMenu] = useState(false);
     const navigate = useNavigate();
-    console.log("blog came in navbar", blogData)
+    // console.log("blog came in navbar", blogData)
 
     // Replace javascript:void(0) paths with your paths
     const navigation = [
@@ -107,33 +110,135 @@ export default function Navbar({ blogData, setBlogData }) {
         { title: "Upgrade", path: "javascript:void(0)" },
         { title: "Support", path: "javascript:void(0)" },
     ];
-    const [submenuNav, setSubmenuNav] = useState({});
+    const [submenuNav, setSubmenuNav] = useState(null); // [Blogheading,menus,CurrentMenu]
     let urlParams = useParams();
+
+
+    // When the blog is clicked in the sidebar -->
     useEffect(() => {
-        if (blogData != null && urlParams.Blogid !== undefined) {
-            setSubmenuNav(blogData[urlParams.Blogid].blogMenus ? blogData[urlParams.Blogid].blogMenus : {});
+        const fetchData = async () => {
+            try {
+                const res = await axios.get(`http://localhost:8080/helpdesk/${urlParams.Blogid}/getBlog`);
+                const data = await res.data;
+                if (res.status === 201) {
+                    setSubmenuNav(prevMenu => {
+                        return (
+                            [data, [], {}]
+                        )
+                    })
+                } else if (res.status === 200) {
+                    const blogHeading = data[0];
+                    const menus = data[1];
+                    const firstMenuItem = data[2];
+
+                    setSubmenuNav(prevMenu => {
+                        return (
+                            [blogHeading, menus, firstMenuItem]
+                        )
+                    })
+                } else {
+                    navigate('/error');
+                }
+            }
+            catch (error) {
+                console.log(error.message);
+                navigate('/error?reason=Blog Not Found');
+            }
+        }
+        if (urlParams.Blogid) {
+            fetchData();
+        } else {
+            console.log("Blog id is not there in the url params")
         }
     }, [urlParams.Blogid])
-    console.log("urlParams", urlParams.Blogid);
-    useEffect(() => {
-        let index = urlParams.Blogid;
-        if (index !== undefined) {
-            setBlogData(prevBlogData => {
-                return ({ ...prevBlogData, [index]: { ...prevBlogData[index], blogMenus: submenuNav } })
-            })
+
+    // Create Menu function 
+    const CreateMenu = async (menu) => {
+        try {
+            const response = await axios.post(`http://localhost:8080/helpdesk/${urlParams.Blogid}/addMenu`, menu)
+            const data = await response.data;
+            if (data) {
+                setSubmenuNav(prevarr => {
+                    const newarr = [...prevarr];
+                    return (
+                        [newarr[0], data, newarr[2]]
+                    )
+                })
+            } else {
+                console.log(response);
+            }
         }
-    }, [submenuNav])
+        catch (error) {
+            console.log(error.message);
+        }
+    }
+
+    const DeleteMenu = async (menu) => {
+        try {
+            const response = await axios.delete(`http://localhost:8080/helpdesk/${urlParams.Blogid}/${menu.blogMenuId}/deleteMenu`)
+            const data = await response.data;
+            if (data) {
+                setSubmenuNav(prevarr => {
+                    const newarr = [...prevarr];
+                    return (
+                        [newarr[0], data, newarr[2]]
+                    )
+                })
+            } else {
+                console.log(response);
+            }
+        }
+        catch (error) {
+            console.log(error.message);
+        }
+    }
+
+    // useEffect(() => {
+    //     let index = urlParams.Blogid;
+    //     if (index !== undefined) {
+    //         setBlogData(prevBlogData => {
+    //             return ({ ...prevBlogData, [index]: { ...prevBlogData[index], blogMenus: submenuNav } })
+    //         })
+    //     }
+    // }, [submenuNav])
 
     const [editBlogMenuNames, setEditBlogMenuNames] = useState(null);
 
+    const darkMode = useContext(DarkModeContext);
+    useEffect(() => {
+        if (urlParams.Menuid !== undefined) {
+            if (document.getElementById(urlParams.Menuid)) {
+                let allMenus = document.querySelectorAll(".menus");
+                allMenus.forEach(menu => {
+                    menu.style.backgroundColor = "";
+                    menu.style.color = "";
+                })
+                if (darkMode.darkMode) {
+                    document.getElementById(urlParams.Menuid).style.cssText = " background-color:rgb(30 41 59);"
+                } else {
+                    document.getElementById(urlParams.Menuid).style.cssText = "background-color:#e5e7eb;";
+                }
+            }
+        }
+
+    }, [urlParams.Menuid, document.getElementById(urlParams.Menuid), darkMode])
+    window.submenuNav = submenuNav;
     return (
-        <header>
+        <header
+            className=" bg-white dark:bg-slate-900 sticky top-0"
+        >
             <div
-                className={`antialiased text-slate-500 dark:text-slate-400 dark:bg-slate-900 bg-white items-center gap-x-14 px-4 max-w-screen-xl mx-auto lg:flex lg:px-8 lg:static ${state ? "h-full fixed inset-x-0 z-50" : ""
+                className={`antialiased text-slate-500 dark:text-slate-400 dark:bg-slate-900 bg-white items-center gap-x-14 px-4 max-w-screen-xl mx-auto lg:flex lg:px-8 lg:static ${state ? "h-max fixed inset-x-0 z-50 " : ""
                     }`}
             >
                 <div className="flex items-center justify-between py-3 lg:py-5 lg:block">
-                    <h1 class="mb-1 font-extrabold text-gray-900 dark:text-white md:text-5xl lg:text-6xl"><span className="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">{blogData !== [] && urlParams.Blogid && blogData[urlParams.Blogid].blogHeading}</span></h1>
+
+                    <h1 class="mb-1 font-extrabold text-gray-900 dark:text-white md:text-5xl ml-5 mt-1 lg:text-6xl">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">
+                            {submenuNav === null ? <Loader /> : submenuNav[0]}
+                        </span>
+                    </h1>
+
                     <div className="lg:hidden">
                         <button
                             className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
@@ -217,7 +322,6 @@ export default function Navbar({ blogData, setBlogData }) {
             </div>
             <nav className="border-b">
                 <ul className="flex items-center gap-x-3 max-w-screen-xl mx-auto px-4 overflow-x-auto lg:px-8">
-                    <Sidebar Blog={blogData} setBlog={setBlogData} />
                     <button className="active:scale-90 pb-1" onClick={() => {
                         setShowCreateMenu(prev => {
                             return (!prev)
@@ -231,28 +335,59 @@ export default function Navbar({ blogData, setBlogData }) {
                             if (e.key === "Enter") {
                                 if (value !== "") {
                                     let index = timebasedindex();
-                                    setSubmenuNav(prevarr => {
-                                        return ({ [index]: { ...prevarr[index], blogMenuId: index, title: value, path: "javascript:void(0)" }, ...prevarr })
+                                    const menu = {
+                                        blogMenuId: index,
+                                        title: value
+                                    }
+                                    CreateMenu(menu);
+                                    setSubmenuNav(prevMenu => {
+                                        const newBlog = [...prevMenu];
+                                        const newMenus = [menu, ...newBlog[1]];
+                                        return (
+                                            [newBlog[0], newMenus, newBlog[2]]
+                                        )
                                     })
                                     setShowCreateMenu(false);
                                 }
                             }
                         }} />}
-                    {Object.values(submenuNav).map((item, idx) => {
+
+                    {submenuNav !== null && submenuNav[1] !== [] && submenuNav[1].map((item, idx) => {
                         let index = item.blogMenuId;
                         return (
                             <li
                                 key={idx}
-                                className={`flex py-1 ${idx === 0 ? "border-b-2 border-indigo-600" : ""}`}
+                                id={index}
+                                className="flex py-1 px-3 menus rounded-t-lg"
                             >
                                 {editBlogMenuNames === index ?
-                                    <input className='ml-1 grow w-20 text-gray-600 outline-none transition duration-300 ease-linear hover:bg-slate-50 hover:text-inherit hover:outline-none focus:bg-slate-50 focus:text-inherit focus:outline-none active:bg-slate-50 active:text-inherit active:outline-none data-[te-sidenav-state-active]:text-inherit data-[te-sidenav-state-focus]:outline-none motion-reduce:transition-none dark:text-gray-300 
-                                    dark:bg-transparent dark:hover:bg-transparent dark:focus:bg-transparent dark:active:bg-transparent' autoFocus type='text' defaultValue={submenuNav[index].title} onKeyDown={e => {
+                                    <input
+                                        className='ml-1 grow w-20 text-gray-600 outline-none transition duration-300 ease-linear hover:bg-slate-50 hover:text-inherit hover:outline-none focus:bg-slate-50 focus:text-inherit focus:outline-none active:bg-slate-50 active:text-inherit active:outline-none data-[te-sidenav-state-active]:text-inherit data-[te-sidenav-state-focus]:outline-none motion-reduce:transition-none dark:text-gray-300 
+                                        dark:bg-transparent dark:hover:bg-transparent dark:focus:bg-transparent dark:active:bg-transparent'
+                                        autoFocus
+                                        type='text'
+                                        defaultValue={submenuNav[1][idx].title}
+                                        onKeyDown={e => {
                                             if (e.key === "Enter") {
                                                 if (e.target.value !== "") {
-                                                    setSubmenuNav((prevobj) => {
+                                                    let menu = {
+                                                        blogMenuId: index,
+                                                        title: e.target.value
+                                                    }
+                                                    CreateMenu(menu);
+                                                    setSubmenuNav(prevMenu => {
+                                                        const newBlog = [...prevMenu];
+                                                        const newMenus = newBlog[1].map(obj => {
+                                                            if (obj.blogMenuId == index) {
+                                                                return (
+                                                                    { ...obj, title: e.target.value }
+                                                                )
+                                                            } else {
+                                                                return ({ ...obj })
+                                                            }
+                                                        })
                                                         return (
-                                                            { ...prevobj, [index]: { ...prevobj[index], title: e.target.value } }
+                                                            [newBlog[0], newMenus, newBlog[2]]
                                                         )
                                                     })
                                                 }
@@ -260,11 +395,24 @@ export default function Navbar({ blogData, setBlogData }) {
                                             }
                                         }} onBlur={(e) => {
                                             if (e.target.value !== "") {
-                                                // console.log(index)
-                                                console.log(submenuNav[index]);
-                                                setSubmenuNav((prevobj) => {
+                                                let menu = {
+                                                    blogMenuId: index,
+                                                    title: e.target.value
+                                                }
+                                                CreateMenu(menu);
+                                                setSubmenuNav(prevMenu => {
+                                                    const newBlog = [...prevMenu];
+                                                    const newMenus = newBlog[1].map(obj => {
+                                                        if (obj.blogMenuId == index) {
+                                                            return (
+                                                                { ...obj, title: e.target.value }
+                                                            )
+                                                        } else {
+                                                            return ({ ...obj })
+                                                        }
+                                                    })
                                                     return (
-                                                        { ...prevobj, [index]: { ...prevobj[index], title: e.target.value } }
+                                                        [newBlog[0], newMenus, newBlog[2]]
                                                     )
                                                 })
                                             }
@@ -277,9 +425,15 @@ export default function Navbar({ blogData, setBlogData }) {
                                         {item.title.length > 12 ? item.title.substring(0, 11) + "..." : item.title}
                                     </button>}
                                 <button id={`${index}navbarMenuContainer-deleteBtn`} className='flex flex-none items-center ml-2' onClick={() => {
-                                    const newBlog = { ...submenuNav };
-                                    delete (newBlog[index]);
-                                    setSubmenuNav(newBlog);
+                                    const newBlog = [...submenuNav];
+                                    const menu = {
+                                        blogMenuId: index
+                                    }
+                                    DeleteMenu(menu);
+                                    const menus = newBlog[1];
+                                    const newMenus = menus.filter(obj => obj.blogMenuId != index)
+                                    console.log([newBlog[0], newMenus, newBlog[2]]);
+                                    setSubmenuNav([newBlog[0], newMenus, newBlog[2]]);
                                 }}>
                                     <span className="mr-2 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-gray-400 dark:[&>svg]:text-gray-300 dark:fill-gray-100 fill-gray-500">
                                         <svg xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 456 511.82"><path d="M48.42 140.13h361.99c17.36 0 29.82 9.78 28.08 28.17l-30.73 317.1c-1.23 13.36-8.99 26.42-25.3 26.42H76.34c-13.63-.73-23.74-9.75-25.09-24.14L20.79 168.99c-1.74-18.38 9.75-28.86 27.63-28.86zM24.49 38.15h136.47V28.1c0-15.94 10.2-28.1 27.02-28.1h81.28c17.3 0 27.65 11.77 27.65 28.01v10.14h138.66c.57 0 1.11.07 1.68.13 10.23.93 18.15 9.02 18.69 19.22.03.79.06 1.39.06 2.17v42.76c0 5.99-4.73 10.89-10.62 11.19-.54 0-1.09.03-1.63.03H11.22c-5.92 0-10.77-4.6-11.19-10.38 0-.72-.03-1.47-.03-2.23v-39.5c0-10.93 4.21-20.71 16.82-23.02 2.53-.45 5.09-.37 7.67-.37zm83.78 208.38c-.51-10.17 8.21-18.83 19.53-19.31 11.31-.49 20.94 7.4 21.45 17.57l8.7 160.62c.51 10.18-8.22 18.84-19.53 19.32-11.32.48-20.94-7.4-21.46-17.57l-8.69-160.63zm201.7-1.74c.51-10.17 10.14-18.06 21.45-17.57 11.32.48 20.04 9.14 19.53 19.31l-8.66 160.63c-.52 10.17-10.14 18.05-21.46 17.57-11.31-.48-20.04-9.14-19.53-19.32l8.67-160.62zm-102.94.87c0-10.23 9.23-18.53 20.58-18.53 11.34 0 20.58 8.3 20.58 18.53v160.63c0 10.23-9.24 18.53-20.58 18.53-11.35 0-20.58-8.3-20.58-18.53V245.66z" /></svg>
