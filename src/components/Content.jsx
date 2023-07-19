@@ -13,6 +13,7 @@ import Accordian from './Accordian';
 import MenuAccordian from './MenuAccordian';
 import axios from 'axios';
 import Loader from './Loader';
+import BASE_URL from '../BASE_URL';
 
 const CssTextField = styled(TextField)({
 
@@ -104,7 +105,7 @@ export default function Content() {
 
     const fetchContent = async (BlogId, MenuId) => {
         try {
-            const res = await axios(`http://localhost:8080/helpdesk/${BlogId}/${MenuId}/getMenu`);
+            const res = await axios(`${BASE_URL}/helpdesk/${BlogId}/${MenuId}/getMenu`);
             if (res.status === 200) {
                 const data = await res.data;
                 console.log(data[1].content);
@@ -146,7 +147,7 @@ export default function Content() {
     const AddContent = async (content) => {
         console.log("content came", content);
         try {
-            const res = await axios.post(`http://localhost:8080/helpdesk/${urlParams.Blogid}/${urlParams.Menuid}/addContent`, content);
+            const res = await axios.post(`${BASE_URL}/helpdesk/${urlParams.Blogid}/${urlParams.Menuid}/addContent`, content);
             if (res.status === 200) {
                 const data = await res.data;
                 setContentData(data)
@@ -160,7 +161,7 @@ export default function Content() {
     }
     const DeleteContent = async (index) => {
         try {
-            const res = await axios.delete(`http://localhost:8080/helpdesk/${urlParams.Blogid}/${urlParams.Menuid}/${index}/deleteContent`);
+            const res = await axios.delete(`${BASE_URL}/helpdesk/${urlParams.Blogid}/${urlParams.Menuid}/${index}/deleteContent`);
             if (res.status === 200) {
                 const data = await res.data;
                 setContentData(data)

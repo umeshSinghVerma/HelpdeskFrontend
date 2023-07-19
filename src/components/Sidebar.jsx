@@ -7,6 +7,7 @@ import {
     Ripple,
     initTE,
 } from "tw-elements";
+import BASE_URL from '../BASE_URL';
 
 function timebasedindex() {
     let date = new Date();
@@ -48,7 +49,7 @@ export default function Sidebar() {
     useEffect(() => {
         const getAllBlogs = async () => {
             try {
-                const response = await axios.get("http://localhost:8080/helpdesk/allBlogs");
+            const response = await axios.get(`${BASE_URL}/helpdesk/allBlogs`);
                 console.log(response.data);
                 const data = await response.data;
                 let finalObject = {};
@@ -72,7 +73,7 @@ export default function Sidebar() {
         try {
             const sentArray = [blog, Object.keys(Blog)];
             console.log("sentArray", sentArray);
-            const response = await axios.post('http://localhost:8080/helpdesk/addBlog', sentArray);
+            const response = await axios.post(`${BASE_URL}/helpdesk/addBlog`, sentArray);
             const CreatedBlog = await response.data;
             console.log("response", response);
             const blogindex = CreatedBlog.blogindex;
@@ -107,7 +108,7 @@ export default function Sidebar() {
 
     const DeleteBlog = async (index) => {
         try {
-            const response = await axios.delete(`http://localhost:8080/helpdesk/${index}/deleteBlog`);
+            const response = await axios.delete(`${BASE_URL}/helpdesk/${index}/deleteBlog`);
             if (response.status === 200) {
                 const data = await response.data;
                 setBlog(data);

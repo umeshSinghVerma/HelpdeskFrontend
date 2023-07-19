@@ -5,6 +5,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import DarkModeContext from "../Contexts/DarkmodeContext";
 import Loader from "./Loader"
 import axios from "axios";
+import BASE_URL from "../BASE_URL";
 function timebasedindex() {
     let date = new Date();
     let millisec = date.getMilliseconds();
@@ -118,7 +119,7 @@ export default function Navbar({ blogData, setBlogData }) {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await axios.get(`http://localhost:8080/helpdesk/${urlParams.Blogid}/getBlog`);
+                const res = await axios.get(`${BASE_URL}/helpdesk/${urlParams.Blogid}/getBlog`);
                 const data = await res.data;
                 if (res.status === 201) {
                     setSubmenuNav(prevMenu => {
@@ -155,7 +156,7 @@ export default function Navbar({ blogData, setBlogData }) {
     // Create Menu function 
     const CreateMenu = async (menu) => {
         try {
-            const response = await axios.post(`http://localhost:8080/helpdesk/${urlParams.Blogid}/addMenu`, menu)
+            const response = await axios.post(`${BASE_URL}/helpdesk/${urlParams.Blogid}/addMenu`, menu)
             const data = await response.data;
             if (data) {
                 setSubmenuNav(prevarr => {
@@ -175,7 +176,7 @@ export default function Navbar({ blogData, setBlogData }) {
 
     const DeleteMenu = async (menu) => {
         try {
-            const response = await axios.delete(`http://localhost:8080/helpdesk/${urlParams.Blogid}/${menu.blogMenuId}/deleteMenu`)
+            const response = await axios.delete(`${BASE_URL}/helpdesk/${urlParams.Blogid}/${menu.blogMenuId}/deleteMenu`)
             const data = await response.data;
             if (data) {
                 setSubmenuNav(prevarr => {
