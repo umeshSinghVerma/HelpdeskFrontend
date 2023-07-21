@@ -16,7 +16,7 @@ export default function MainPage() {
     useEffect(() => {
         localStorage.setItem("allContent", JSON.stringify(allContent));
     }, [allContent])
-    window.allContent=allContent;
+    window.allContent = allContent;
 
     const urlParams = useParams();
     // useEffect(() => {
@@ -51,9 +51,11 @@ export default function MainPage() {
 
     return (
         allset === null ? (
-            <div>
+            <div className='flex flex-col'>
                 <Navbar blogData={allContent} setBlogData={setAllContent} />
-                <Content blogData={allContent} setBlogData={setAllContent} />
+                <div>
+                    <Content blogData={allContent} setBlogData={setAllContent} />
+                </div>
             </div>
         ) : (
             <h1>{allset}</h1>

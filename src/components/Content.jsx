@@ -14,6 +14,9 @@ import MenuAccordian from './MenuAccordian';
 import axios from 'axios';
 import Loader from './Loader';
 import BASE_URL from '../BASE_URL';
+import PopupModel from './Signup';
+import useAuthContext from '../hooks/useAuthContext';
+import useEditMode from '../hooks/useEditMode';
 
 const CssTextField = styled(TextField)({
 
@@ -92,6 +95,8 @@ export default function Content() {
     const [contentData, setContentData] = useState(null);
     const [blogData, setBlogData] = useState([]);
     const [editContent, setEditContent] = useState(null);
+    const {user}=useAuthContext();
+    const {editMode} = useEditMode();
 
     useEffect(() => {
         function resizefn() {
@@ -103,12 +108,21 @@ export default function Content() {
         };
     }, []);
 
+    // Observing the height of the header
+    const [navbarHeight, setNavbarHeight] = useState(0);
+    useEffect(() => {
+        if (document.getElementById('HEADER')) {
+            const element = document.getElementById('HEADER');
+            setNavbarHeight(element.offsetHeight);
+        }
+    }, [width])
+
     const fetchContent = async (BlogId, MenuId) => {
         try {
             const res = await axios(`${BASE_URL}/helpdesk/${BlogId}/${MenuId}/getMenu`);
             if (res.status === 200) {
                 const data = await res.data;
-                console.log(data[1].content);
+                console.log("checked data",data[2]);
                 if (data[1].content) {
                     setContentData(prevdata => {
                         const ContentArray = Object.values(data[1].content).map(obj => {
@@ -137,7 +151,7 @@ export default function Content() {
 
         if (urlParams.Blogid !== undefined && urlParams.Menuid !== undefined) {
             fetchContent(urlParams.Blogid, urlParams.Menuid);
-        }else{
+        } else {
             setContentData([]);
         }
     }, [urlParams.Menuid, urlParams.Blogid])
@@ -145,9 +159,17 @@ export default function Content() {
     window.contentData = contentData;
 
     const AddContent = async (content) => {
+        if(!user){
+            return
+        }
         console.log("content came", content);
         try {
-            const res = await axios.post(`${BASE_URL}/helpdesk/${urlParams.Blogid}/${urlParams.Menuid}/addContent`, content);
+            const res = await axios.post(`${BASE_URL}/helpdesk/${urlParams.Blogid}/${urlParams.Menuid}/addContent`, content,{
+                headers:{
+                    Authorization:`Bearer ${user.token}`
+                }
+            }
+            );
             if (res.status === 200) {
                 const data = await res.data;
                 setContentData(data)
@@ -160,8 +182,15 @@ export default function Content() {
         }
     }
     const DeleteContent = async (index) => {
+        if(!user){
+            return
+        }
         try {
-            const res = await axios.delete(`${BASE_URL}/helpdesk/${urlParams.Blogid}/${urlParams.Menuid}/${index}/deleteContent`);
+            const res = await axios.delete(`${BASE_URL}/helpdesk/${urlParams.Blogid}/${urlParams.Menuid}/${index}/deleteContent`,{
+                headers:{
+                    Authorization:`Bearer ${user.token}`
+                }
+            });
             if (res.status === 200) {
                 const data = await res.data;
                 setContentData(data)
@@ -195,7 +224,7 @@ export default function Content() {
         const scrollToElement = () => {
             const targetElement = document.getElementById(urlParams.Headingid);
             if (targetElement) {
-                const margin = 160;
+                const margin = 120;
                 const topOffset = targetElement.offsetTop - margin;
                 window.scrollTo({ top: topOffset, behavior: 'smooth' });
             }
@@ -227,13 +256,13 @@ export default function Content() {
     return (
         <>
             <div
-                className='flex items-start w-[95%] mx-auto gap-20'
-                style={width > 1024 ? { minHeight: "calc(100vh - 142.68px)" } : width > 768 ? { minHeight: "calc(100vh - 114.68px)" } : { minHeight: "calc(100vh - 90.67px)" }}
+                className='flex items-start w-[95%] -z-10 mx-auto gap-20'
+                style={{ minHeight: `calc(100vh - ${navbarHeight}px)` }}
             >
-                <div className='mt-4'>
-                    <Sidebar Blog={blogData} setBlog={setBlogData} />
-                </div>
-                {width > 1024 && <Accordian Headings={contentData} />}
+                {width > 1024 && 
+                <div className='sticky top-24'>
+                    <Accordian Headings={contentData} />
+                </div>}
                 <div className='flex-grow'>
                     {
                         contentData === null ? <Loader /> : contentData.map((obj, key) => {
@@ -320,7 +349,7 @@ export default function Content() {
                                                 <h1 id={obj.index} className="HEADING text-4xl font-bold my-4 leading-tight dark:text-gray-300 text-slate-800">
                                                     {obj.text}
                                                 </h1>
-                                                <button className='flex flex-none items-center ml-2' onClick={() => {
+                                                {editMode && (<><button className='flex flex-none items-center ml-2' onClick={() => {
                                                     const newBlog = contentData.filter(con => con.index != obj.index)
                                                     DeleteContent(obj.index);
                                                     setContentData(newBlog);
@@ -338,7 +367,7 @@ export default function Content() {
                                                         <span className="mr-1 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-gray-400 dark:[&>svg]:text-gray-300 dark:fill-gray-100 fill-gray-500">
                                                             <svg xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 0 122.88 122.88" ><path class="st0" d="M79.7,31.87c-0.7-0.65-1.5-1-2.4-0.95c-0.9,0-1.7,0.35-2.35,1.05l-5.29,5.49L84.49,51.8l5.34-5.59 c0.65-0.65,0.9-1.5,0.9-2.4c0-0.9-0.35-1.75-1-2.35L79.7,31.87L79.7,31.87L79.7,31.87z M12.51,0h97.85c3.44,0,6.57,1.41,8.84,3.67 c2.27,2.27,3.67,5.4,3.67,8.84v97.85c0,3.44-1.41,6.57-3.67,8.84c-2.27,2.27-5.4,3.67-8.84,3.67H12.51c-3.44,0-6.57-1.41-8.84-3.67 c-2.27-2.27-3.67-5.4-3.67-8.84V12.51c0-3.44,1.41-6.57,3.67-8.84C5.94,1.41,9.07,0,12.51,0L12.51,0z M110.37,5.39H12.51 c-1.96,0-3.74,0.8-5.03,2.1c-1.29,1.29-2.1,3.08-2.1,5.03v97.85c0,1.96,0.8,3.74,2.1,5.03c1.29,1.29,3.08,2.1,5.03,2.1h97.85 c1.96,0,3.74-0.8,5.03-2.1c1.29-1.29,2.1-3.08,2.1-5.03V12.51c0-1.96-0.8-3.74-2.1-5.03C114.1,6.19,112.32,5.39,110.37,5.39 L110.37,5.39z M51.93,85.61c-1.95,0.65-3.95,1.25-5.89,1.9c-1.95,0.65-3.9,1.3-5.89,1.95c-4.64,1.5-7.19,2.35-7.74,2.5 c-0.55,0.15-0.2-2,0.95-6.49l3.7-14.13l0.3-0.32L51.93,85.61L51.93,85.61L51.93,85.61L51.93,85.61z M42.74,65.41l22.9-23.78 l14.83,14.28L57.33,79.99L42.74,65.41L42.74,65.41z" /></svg>
                                                         </span>}
-                                                </button>
+                                                </button></>)}
                                             </div>
                                         )
                                 )
@@ -441,24 +470,24 @@ export default function Content() {
                                                             if (e.ctrlKey && e.key === 'Enter') {
                                                                 if (e.target.value !== "") {
                                                                     const content = {
-                                                                    type: "paragraph",
-                                                                    text: e.target.value,
-                                                                    index: editContent
-                                                                }
-                                                                AddContent(content);
-                                                                setContentData((prevarr) => {
-                                                                const newArr = prevarr.map(obj => {
-                                                                    if (obj.index == editContent) {
-                                                                        obj.text = e.target.value;
-                                                                        return obj
-                                                                    } else {
-                                                                        return obj
+                                                                        type: "paragraph",
+                                                                        text: e.target.value,
+                                                                        index: editContent
                                                                     }
-                                                                })
-                                                                    return (
-                                                                        newArr
-                                                                    )
-                                                                })
+                                                                    AddContent(content);
+                                                                    setContentData((prevarr) => {
+                                                                        const newArr = prevarr.map(obj => {
+                                                                            if (obj.index == editContent) {
+                                                                                obj.text = e.target.value;
+                                                                                return obj
+                                                                            } else {
+                                                                                return obj
+                                                                            }
+                                                                        })
+                                                                        return (
+                                                                            newArr
+                                                                        )
+                                                                    })
                                                                 }
                                                                 setSearchParams(prevParams => {
                                                                     prevParams.delete("add");
@@ -476,14 +505,14 @@ export default function Content() {
                                                                 }
                                                                 AddContent(content);
                                                                 setContentData((prevarr) => {
-                                                                const newArr = prevarr.map(obj => {
-                                                                    if (obj.index == editContent) {
-                                                                        obj.text = e.target.value;
-                                                                        return obj
-                                                                    } else {
-                                                                        return obj
-                                                                    }
-                                                                })
+                                                                    const newArr = prevarr.map(obj => {
+                                                                        if (obj.index == editContent) {
+                                                                            obj.text = e.target.value;
+                                                                            return obj
+                                                                        } else {
+                                                                            return obj
+                                                                        }
+                                                                    })
                                                                     return (
                                                                         newArr
                                                                     )
@@ -514,7 +543,7 @@ export default function Content() {
                                                     className="font-sans leading-tight dark:text-gray-300 text-gray-600"
                                                     dangerouslySetInnerHTML={{ __html: obj.text.replace(/\n/g, '<br/>') }}
                                                 ></p>
-                                                <button className='flex flex-none items-center ml-2 mb-auto' onClick={() => {
+                                                {editMode && (<><button className='flex flex-none items-center ml-2 mb-auto' onClick={() => {
                                                     const newBlog = contentData.filter(con => con.index != obj.index)
                                                     DeleteContent(obj.index);
                                                     setContentData(newBlog);
@@ -532,7 +561,7 @@ export default function Content() {
                                                         <span className="mr-1 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-gray-400 dark:[&>svg]:text-gray-300 dark:fill-gray-100 fill-gray-500">
                                                             <svg xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 0 122.88 122.88" ><path class="st0" d="M79.7,31.87c-0.7-0.65-1.5-1-2.4-0.95c-0.9,0-1.7,0.35-2.35,1.05l-5.29,5.49L84.49,51.8l5.34-5.59 c0.65-0.65,0.9-1.5,0.9-2.4c0-0.9-0.35-1.75-1-2.35L79.7,31.87L79.7,31.87L79.7,31.87z M12.51,0h97.85c3.44,0,6.57,1.41,8.84,3.67 c2.27,2.27,3.67,5.4,3.67,8.84v97.85c0,3.44-1.41,6.57-3.67,8.84c-2.27,2.27-5.4,3.67-8.84,3.67H12.51c-3.44,0-6.57-1.41-8.84-3.67 c-2.27-2.27-3.67-5.4-3.67-8.84V12.51c0-3.44,1.41-6.57,3.67-8.84C5.94,1.41,9.07,0,12.51,0L12.51,0z M110.37,5.39H12.51 c-1.96,0-3.74,0.8-5.03,2.1c-1.29,1.29-2.1,3.08-2.1,5.03v97.85c0,1.96,0.8,3.74,2.1,5.03c1.29,1.29,3.08,2.1,5.03,2.1h97.85 c1.96,0,3.74-0.8,5.03-2.1c1.29-1.29,2.1-3.08,2.1-5.03V12.51c0-1.96-0.8-3.74-2.1-5.03C114.1,6.19,112.32,5.39,110.37,5.39 L110.37,5.39z M51.93,85.61c-1.95,0.65-3.95,1.25-5.89,1.9c-1.95,0.65-3.9,1.3-5.89,1.95c-4.64,1.5-7.19,2.35-7.74,2.5 c-0.55,0.15-0.2-2,0.95-6.49l3.7-14.13l0.3-0.32L51.93,85.61L51.93,85.61L51.93,85.61L51.93,85.61z M42.74,65.41l22.9-23.78 l14.83,14.28L57.33,79.99L42.74,65.41L42.74,65.41z" /></svg>
                                                         </span>}
-                                                </button>
+                                                </button></>)}
                                             </div>
                                         )
                                 )
@@ -541,7 +570,7 @@ export default function Content() {
                         })
                     }
                 </div>
-                {width > 1024 && <div className='sticky top-40'><MenuAccordian /></div>}
+                {editMode && width > 1024 && urlParams.Menuid!==undefined && <div className='sticky top-40'><MenuAccordian /></div>}
             </div>
         </>
     )

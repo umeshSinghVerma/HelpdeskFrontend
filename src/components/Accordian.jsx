@@ -8,7 +8,7 @@ export default function Accordian({ Headings }) {
     const urlParams = useParams();
     const navigate = useNavigate();
     return (
-        <div className="hs-accordion-group sticky top-40">
+        <div className="hs-accordion-group mt-10">
             {
                 Headings && Headings.map((obj, key) => {
                     if (obj.type == 'heading') {

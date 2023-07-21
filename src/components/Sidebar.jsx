@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import ReactDOM from 'react-dom'
 import axios from 'axios'
 // Initialization for ES Users
 import {
@@ -8,6 +9,8 @@ import {
     initTE,
 } from "tw-elements";
 import BASE_URL from '../BASE_URL';
+import useAuthContext from '../hooks/useAuthContext';
+import useEditMode from '../hooks/useEditMode';
 
 function timebasedindex() {
     let date = new Date();
@@ -37,16 +40,39 @@ function timebasedindex() {
 }
 
 
-
-
 export default function Sidebar() {
     const urlParams = useParams();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [editBlogNames, setEditBlogNames] = useState(null);
     const [Blog, setBlog] = useState([]);
+    const {user}=useAuthContext();
+    const {editMode} = useEditMode();
 
     useEffect(() => {
+        const getAllUserBlogs = async () => {
+            try {
+            const response = await axios.get(`${BASE_URL}/helpdesk/allUserBlogs`,{
+                headers:{
+                    Authorization:`Bearer ${user.token}`
+                }
+            });
+                console.log(response.data);
+                const data = await response.data;
+                let finalObject = {};
+                for (const obj of data) {
+                    finalObject[obj.blogindex] = {
+                        blogindex: obj.blogindex,
+                        blogHeading: obj.blogHeading,
+                        blogMenus: {}
+                    }
+                }
+                setBlog(finalObject);
+            }
+            catch (error) {
+                console.log(error.response.data);
+            }
+        }
         const getAllBlogs = async () => {
             try {
             const response = await axios.get(`${BASE_URL}/helpdesk/allBlogs`);
@@ -63,17 +89,26 @@ export default function Sidebar() {
                 setBlog(finalObject);
             }
             catch (error) {
-                console.log(error.message);
+                console.log(error.response.data);
             }
         }
-        getAllBlogs();
-    }, [])
+        if(user){
+            getAllUserBlogs();
+        }else{
+            getAllBlogs();
+        }
+    }, [user])
 
     const CreateBlog = async (blog) => {
+        if(!user){
+            return;
+        }
         try {
             const sentArray = [blog, Object.keys(Blog)];
             console.log("sentArray", sentArray);
-            const response = await axios.post(`${BASE_URL}/helpdesk/addBlog`, sentArray);
+            const response = await axios.post(`${BASE_URL}/helpdesk/addBlog`, sentArray,{
+                headers:{Authorization:`Bearer ${user.token}`}
+            });
             const CreatedBlog = await response.data;
             console.log("response", response);
             const blogindex = CreatedBlog.blogindex;
@@ -107,8 +142,15 @@ export default function Sidebar() {
     }
 
     const DeleteBlog = async (index) => {
+        if(!user){
+            return;
+        }
         try {
-            const response = await axios.delete(`${BASE_URL}/helpdesk/${index}/deleteBlog`);
+            const response = await axios.delete(`${BASE_URL}/helpdesk/${index}/deleteBlog`,{
+                headers:{
+                    Authorization:`Bearer ${user.token}`
+                }
+            });
             if (response.status === 200) {
                 const data = await response.data;
                 setBlog(data);
@@ -124,7 +166,7 @@ export default function Sidebar() {
     useEffect(() => {
         initTE({ Sidenav, Ripple })
     }, [])
-    return (
+    return ReactDOM.createPortal(
         <div className='flex'>
             <nav
                 id="sidenav-8"
@@ -147,7 +189,7 @@ export default function Sidebar() {
                         alt="TE Logo"
                         draggable="false"
                     />
-                    <span>Tailwind Elements</span>
+                    <span className='text-neutral-700 dark:text-neutral-200'>Write On Web</span>
                 </a>
                 <ul
                     className="relative m-0 list-none px-[0.2rem] pb-12"
@@ -274,30 +316,30 @@ export default function Sidebar() {
                                                 {item.blogHeading.length > 12 ? item.blogHeading.substring(0, 11) + "..." : item.blogHeading}
                                             </button>}
 
-                                        <button id={`${item.blogindex}sidebarBlogContainer-deleteBtn`} className='flex flex-none items-center' onClick={() => {
-                                            console.log("urlparama blogid",urlParams.Blogid,index);
-                                            if (urlParams.Blogid == index) {
-                                                navigate("/");
-                                            }
-                                            DeleteBlog(index);
-                                            const newBlog = { ...Blog };
-                                            delete (newBlog[index]);
-                                            setBlog(newBlog);
-                                        }}>
-                                            <span className="mr-4 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-gray-400 dark:[&>svg]:text-gray-300 dark:fill-gray-100 fill-gray-500">
-                                                <svg xmlns="http://www.w3.org/2000/svg" shapeRendering="geometricPrecision" textRendering="geometricPrecision" imageRendering="optimizeQuality" fillRule="evenodd" clipRule="evenodd" viewBox="0 0 456 511.82"><path d="M48.42 140.13h361.99c17.36 0 29.82 9.78 28.08 28.17l-30.73 317.1c-1.23 13.36-8.99 26.42-25.3 26.42H76.34c-13.63-.73-23.74-9.75-25.09-24.14L20.79 168.99c-1.74-18.38 9.75-28.86 27.63-28.86zM24.49 38.15h136.47V28.1c0-15.94 10.2-28.1 27.02-28.1h81.28c17.3 0 27.65 11.77 27.65 28.01v10.14h138.66c.57 0 1.11.07 1.68.13 10.23.93 18.15 9.02 18.69 19.22.03.79.06 1.39.06 2.17v42.76c0 5.99-4.73 10.89-10.62 11.19-.54 0-1.09.03-1.63.03H11.22c-5.92 0-10.77-4.6-11.19-10.38 0-.72-.03-1.47-.03-2.23v-39.5c0-10.93 4.21-20.71 16.82-23.02 2.53-.45 5.09-.37 7.67-.37zm83.78 208.38c-.51-10.17 8.21-18.83 19.53-19.31 11.31-.49 20.94 7.4 21.45 17.57l8.7 160.62c.51 10.18-8.22 18.84-19.53 19.32-11.32.48-20.94-7.4-21.46-17.57l-8.69-160.63zm201.7-1.74c.51-10.17 10.14-18.06 21.45-17.57 11.32.48 20.04 9.14 19.53 19.31l-8.66 160.63c-.52 10.17-10.14 18.05-21.46 17.57-11.31-.48-20.04-9.14-19.53-19.32l8.67-160.62zm-102.94.87c0-10.23 9.23-18.53 20.58-18.53 11.34 0 20.58 8.3 20.58 18.53v160.63c0 10.23-9.24 18.53-20.58 18.53-11.35 0-20.58-8.3-20.58-18.53V245.66z" /></svg>
-                                            </span>
-
-                                        </button>
-                                        <button className='flex flex-none items-center' onClick={() => {
-                                            setEditBlogNames(index);
-                                        }}>
-                                            {editBlogNames === index ? "" :
+                                        {editMode && (<>
+                                            <button id={`${item.blogindex}sidebarBlogContainer-deleteBtn`} className='flex flex-none items-center' onClick={() => {
+                                                console.log("urlparama blogid",urlParams.Blogid,index);
+                                                if (urlParams.Blogid == index) {
+                                                    navigate("/");
+                                                }
+                                                DeleteBlog(index);
+                                                const newBlog = { ...Blog };
+                                                delete (newBlog[index]);
+                                                setBlog(newBlog);
+                                            }}>
                                                 <span className="mr-4 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-gray-400 dark:[&>svg]:text-gray-300 dark:fill-gray-100 fill-gray-500">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 0 122.88 122.88" ><path class="st0" d="M79.7,31.87c-0.7-0.65-1.5-1-2.4-0.95c-0.9,0-1.7,0.35-2.35,1.05l-5.29,5.49L84.49,51.8l5.34-5.59 c0.65-0.65,0.9-1.5,0.9-2.4c0-0.9-0.35-1.75-1-2.35L79.7,31.87L79.7,31.87L79.7,31.87z M12.51,0h97.85c3.44,0,6.57,1.41,8.84,3.67 c2.27,2.27,3.67,5.4,3.67,8.84v97.85c0,3.44-1.41,6.57-3.67,8.84c-2.27,2.27-5.4,3.67-8.84,3.67H12.51c-3.44,0-6.57-1.41-8.84-3.67 c-2.27-2.27-3.67-5.4-3.67-8.84V12.51c0-3.44,1.41-6.57,3.67-8.84C5.94,1.41,9.07,0,12.51,0L12.51,0z M110.37,5.39H12.51 c-1.96,0-3.74,0.8-5.03,2.1c-1.29,1.29-2.1,3.08-2.1,5.03v97.85c0,1.96,0.8,3.74,2.1,5.03c1.29,1.29,3.08,2.1,5.03,2.1h97.85 c1.96,0,3.74-0.8,5.03-2.1c1.29-1.29,2.1-3.08,2.1-5.03V12.51c0-1.96-0.8-3.74-2.1-5.03C114.1,6.19,112.32,5.39,110.37,5.39 L110.37,5.39z M51.93,85.61c-1.95,0.65-3.95,1.25-5.89,1.9c-1.95,0.65-3.9,1.3-5.89,1.95c-4.64,1.5-7.19,2.35-7.74,2.5 c-0.55,0.15-0.2-2,0.95-6.49l3.7-14.13l0.3-0.32L51.93,85.61L51.93,85.61L51.93,85.61L51.93,85.61z M42.74,65.41l22.9-23.78 l14.83,14.28L57.33,79.99L42.74,65.41L42.74,65.41z" /></svg>
-                                                </span>}
-
-                                        </button>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" shapeRendering="geometricPrecision" textRendering="geometricPrecision" imageRendering="optimizeQuality" fillRule="evenodd" clipRule="evenodd" viewBox="0 0 456 511.82"><path d="M48.42 140.13h361.99c17.36 0 29.82 9.78 28.08 28.17l-30.73 317.1c-1.23 13.36-8.99 26.42-25.3 26.42H76.34c-13.63-.73-23.74-9.75-25.09-24.14L20.79 168.99c-1.74-18.38 9.75-28.86 27.63-28.86zM24.49 38.15h136.47V28.1c0-15.94 10.2-28.1 27.02-28.1h81.28c17.3 0 27.65 11.77 27.65 28.01v10.14h138.66c.57 0 1.11.07 1.68.13 10.23.93 18.15 9.02 18.69 19.22.03.79.06 1.39.06 2.17v42.76c0 5.99-4.73 10.89-10.62 11.19-.54 0-1.09.03-1.63.03H11.22c-5.92 0-10.77-4.6-11.19-10.38 0-.72-.03-1.47-.03-2.23v-39.5c0-10.93 4.21-20.71 16.82-23.02 2.53-.45 5.09-.37 7.67-.37zm83.78 208.38c-.51-10.17 8.21-18.83 19.53-19.31 11.31-.49 20.94 7.4 21.45 17.57l8.7 160.62c.51 10.18-8.22 18.84-19.53 19.32-11.32.48-20.94-7.4-21.46-17.57l-8.69-160.63zm201.7-1.74c.51-10.17 10.14-18.06 21.45-17.57 11.32.48 20.04 9.14 19.53 19.31l-8.66 160.63c-.52 10.17-10.14 18.05-21.46 17.57-11.31-.48-20.04-9.14-19.53-19.32l8.67-160.62zm-102.94.87c0-10.23 9.23-18.53 20.58-18.53 11.34 0 20.58 8.3 20.58 18.53v160.63c0 10.23-9.24 18.53-20.58 18.53-11.35 0-20.58-8.3-20.58-18.53V245.66z" /></svg>
+                                                </span>
+                                            </button>
+                                            <button className='flex flex-none items-center' onClick={() => {
+                                                setEditBlogNames(index);
+                                            }}>
+                                                {editBlogNames === index ? "" :
+                                                    <span className="mr-4 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-gray-400 dark:[&>svg]:text-gray-300 dark:fill-gray-100 fill-gray-500">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 0 122.88 122.88" ><path class="st0" d="M79.7,31.87c-0.7-0.65-1.5-1-2.4-0.95c-0.9,0-1.7,0.35-2.35,1.05l-5.29,5.49L84.49,51.8l5.34-5.59 c0.65-0.65,0.9-1.5,0.9-2.4c0-0.9-0.35-1.75-1-2.35L79.7,31.87L79.7,31.87L79.7,31.87z M12.51,0h97.85c3.44,0,6.57,1.41,8.84,3.67 c2.27,2.27,3.67,5.4,3.67,8.84v97.85c0,3.44-1.41,6.57-3.67,8.84c-2.27,2.27-5.4,3.67-8.84,3.67H12.51c-3.44,0-6.57-1.41-8.84-3.67 c-2.27-2.27-3.67-5.4-3.67-8.84V12.51c0-3.44,1.41-6.57,3.67-8.84C5.94,1.41,9.07,0,12.51,0L12.51,0z M110.37,5.39H12.51 c-1.96,0-3.74,0.8-5.03,2.1c-1.29,1.29-2.1,3.08-2.1,5.03v97.85c0,1.96,0.8,3.74,2.1,5.03c1.29,1.29,3.08,2.1,5.03,2.1h97.85 c1.96,0,3.74-0.8,5.03-2.1c1.29-1.29,2.1-3.08,2.1-5.03V12.51c0-1.96-0.8-3.74-2.1-5.03C114.1,6.19,112.32,5.39,110.37,5.39 L110.37,5.39z M51.93,85.61c-1.95,0.65-3.95,1.25-5.89,1.9c-1.95,0.65-3.9,1.3-5.89,1.95c-4.64,1.5-7.19,2.35-7.74,2.5 c-0.55,0.15-0.2-2,0.95-6.49l3.7-14.13l0.3-0.32L51.93,85.61L51.93,85.61L51.93,85.61L51.93,85.61z M42.74,65.41l22.9-23.78 l14.83,14.28L57.33,79.99L42.74,65.41L42.74,65.41z" /></svg>
+                                                    </span>}
+                                            </button>
+                                        </>)}
                                     </span>
                                 </li>
 
@@ -628,28 +670,9 @@ export default function Sidebar() {
             </nav>
             {/* Sidenav */}
             {/* Toggler */}
-            <button
-                data-te-sidenav-toggle-ref=""
-                data-te-target="#sidenav-8"
-                aria-controls="#sidenav-8"
-                aria-haspopup="true"
-            >
-                <span className="block pb-1 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-slate-900 dark:[&>svg]:text-slate-400">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="h-5 w-5"
-                    >
-                        <path
-                            fillRule="evenodd"
-                            d="M3 6.75A.75.75 0 013.75 6h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 6.75zM3 12a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 12zm0 5.25a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z"
-                            clipRule="evenodd"
-                        />
-                    </svg>
-                </span>
-            </button>
+            
             {/* Toggler */}
-        </div>
+        </div>,
+        document.getElementById("portal")
     )
 }
