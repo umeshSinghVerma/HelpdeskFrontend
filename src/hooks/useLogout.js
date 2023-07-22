@@ -1,13 +1,13 @@
-import { useNavigate } from "react-router-dom";
 import useAuthContext from "./useAuthContext";
+import useEditMode from "./useEditMode";
 
 export default function useLogout() {
-    const navigate = useNavigate();
     const {dispatch} = useAuthContext();
+    const {setEditMode}=useEditMode();
     const logout = () => {
         localStorage.removeItem('user');
         dispatch({type:'LOGOUT'})
-        navigate('/');
+        setEditMode(false);
     }
     return {logout}
 }

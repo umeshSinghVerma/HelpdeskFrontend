@@ -147,6 +147,7 @@ export default function Navbar() {
     ];
     const [submenuNav, setSubmenuNav] = useState(null); // [Blogheading,menus,CurrentMenu]
     const [blogOwner,setBlogOwner]=useState(null);
+    const [loading,setLoading]=useState(false);
     let urlParams = useParams();
 
 
@@ -154,6 +155,7 @@ export default function Navbar() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                setLoading(true);
                 const res = await axios.get(`${BASE_URL}/helpdesk/${urlParams.Blogid}/getBlog`);
                 const data = await res.data;
                 console.log("otherBlogData",data);  
@@ -183,6 +185,7 @@ export default function Navbar() {
                 console.log(error.message);
                 navigate('/error?reason=Blog Not Found');
             }
+            setLoading(false);
         }
         if (urlParams.Blogid) {
             fetchData();
@@ -284,7 +287,7 @@ export default function Navbar() {
 
                     <h1 class="text-4xl">
                         <span className="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">
-                            {submenuNav === null ? <Loader /> : submenuNav[0]}
+                            {loading ? <Loader/> : submenuNav !== null && submenuNav[0]}
                         </span>
                     </h1>
 

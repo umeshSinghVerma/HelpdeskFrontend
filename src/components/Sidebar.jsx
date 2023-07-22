@@ -11,6 +11,7 @@ import {
 import BASE_URL from '../BASE_URL';
 import useAuthContext from '../hooks/useAuthContext';
 import useEditMode from '../hooks/useEditMode';
+import Loader from './Loader';
 
 function timebasedindex() {
     let date = new Date();
@@ -46,17 +47,19 @@ export default function Sidebar() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [editBlogNames, setEditBlogNames] = useState(null);
     const [Blog, setBlog] = useState([]);
-    const {user}=useAuthContext();
-    const {editMode} = useEditMode();
+    const { user } = useAuthContext();
+    const { editMode } = useEditMode();
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         const getAllUserBlogs = async () => {
             try {
-            const response = await axios.get(`${BASE_URL}/helpdesk/allUserBlogs`,{
-                headers:{
-                    Authorization:`Bearer ${user.token}`
-                }
-            });
+                setLoading(true)
+                const response = await axios.get(`${BASE_URL}/helpdesk/allUserBlogs`, {
+                    headers: {
+                        Authorization: `Bearer ${user.token}`
+                    }
+                });
                 console.log(response.data);
                 const data = await response.data;
                 let finalObject = {};
@@ -70,12 +73,18 @@ export default function Sidebar() {
                 setBlog(finalObject);
             }
             catch (error) {
-                console.log(error.response.data);
+                if(error.response){
+                    console.log(error.response.data);
+                }else{
+                    console.log("can not make a request");
+                }
             }
+            setLoading(false)
         }
         const getAllBlogs = async () => {
             try {
-            const response = await axios.get(`${BASE_URL}/helpdesk/allBlogs`);
+                setLoading(true)
+                const response = await axios.get(`${BASE_URL}/helpdesk/allBlogs`);
                 console.log(response.data);
                 const data = await response.data;
                 let finalObject = {};
@@ -91,23 +100,24 @@ export default function Sidebar() {
             catch (error) {
                 console.log(error.response.data);
             }
+            setLoading(false)
         }
-        if(user){
+        if (user) {
             getAllUserBlogs();
-        }else{
+        } else {
             getAllBlogs();
         }
     }, [user])
 
     const CreateBlog = async (blog) => {
-        if(!user){
+        if (!user) {
             return;
         }
         try {
             const sentArray = [blog, Object.keys(Blog)];
             console.log("sentArray", sentArray);
-            const response = await axios.post(`${BASE_URL}/helpdesk/addBlog`, sentArray,{
-                headers:{Authorization:`Bearer ${user.token}`}
+            const response = await axios.post(`${BASE_URL}/helpdesk/addBlog`, sentArray, {
+                headers: { Authorization: `Bearer ${user.token}` }
             });
             const CreatedBlog = await response.data;
             console.log("response", response);
@@ -142,13 +152,13 @@ export default function Sidebar() {
     }
 
     const DeleteBlog = async (index) => {
-        if(!user){
+        if (!user) {
             return;
         }
         try {
-            const response = await axios.delete(`${BASE_URL}/helpdesk/${index}/deleteBlog`,{
-                headers:{
-                    Authorization:`Bearer ${user.token}`
+            const response = await axios.delete(`${BASE_URL}/helpdesk/${index}/deleteBlog`, {
+                headers: {
+                    Authorization: `Bearer ${user.token}`
                 }
             });
             if (response.status === 200) {
@@ -258,7 +268,7 @@ export default function Sidebar() {
                         </span>
                     </li>
                     {
-                        Blog !== [] && Object.values(Blog).map((item, key) => {
+                        loading === true ? <Loader/> : Blog !==[] && Object.values(Blog).map((item, key) => {
                             const index = item.blogindex;
                             return (
                                 <li key={key} id={`${item.blogindex}sidebarBlogContainer`} className="relative flex">
@@ -318,7 +328,7 @@ export default function Sidebar() {
 
                                         {editMode && (<>
                                             <button id={`${item.blogindex}sidebarBlogContainer-deleteBtn`} className='flex flex-none items-center' onClick={() => {
-                                                console.log("urlparama blogid",urlParams.Blogid,index);
+                                                console.log("urlparama blogid", urlParams.Blogid, index);
                                                 if (urlParams.Blogid == index) {
                                                     navigate("/");
                                                 }
@@ -670,7 +680,7 @@ export default function Sidebar() {
             </nav>
             {/* Sidenav */}
             {/* Toggler */}
-            
+
             {/* Toggler */}
         </div>,
         document.getElementById("portal")
