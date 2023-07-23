@@ -13,75 +13,7 @@ export default function Signup() {
     useEffect(() => {
         initTE({ Modal, Ripple });
     }, []);
-    // has number
-    const hasNumber = (number) => new RegExp(/[0-9]/).test(number);
 
-    // has mix of small and capitals
-    const hasSmall = (number) => new RegExp(/[a-z]/).test(number);
-    const hasCapital = (number) => new RegExp(/[A-Z]/).test(number);
-
-    // has special chars
-    const hasSpecial = (number) => new RegExp(/[!#@$%^&*)(+=._-]/).test(number);
-
-    const [length, setLength] = useState(0);
-
-    useEffect(() => {
-        const passwordInput = document.getElementById("password");
-        const updateLength = () => {
-            setLength(passwordInput.value.length);
-        };
-
-        passwordInput.addEventListener("input", updateLength);
-
-        return () => {
-            passwordInput.removeEventListener("input", updateLength);
-        };
-    }, []);
-
-    // set color based on password strength
-    const strengthColor = (count) => {
-        if (count < 2) return { label: 'Poor', color: 'Red' };
-        if (count < 3) return { label: 'Weak', color: 'yellow' };
-        if (count < 4) return { label: 'Normal', color: 'dark-yellow' };
-        if (count < 5) return { label: 'Good', color: 'Green' };
-        if (count < 6) return { label: 'Strong', color: 'DarkGreen' };
-        return { label: 'Poor', color: 'Red' };
-    };
-    function passwordStrength() {
-        let password = document.getElementById("password").value;
-        if (length > 0) {
-            let colorDiv = document.getElementById("passwordStrengthColor");
-            let Strength = document.getElementById("passwordStrengthValue");
-            let count = strengthIndicator(password);
-            let obj = strengthColor(count);
-            colorDiv.style.backgroundColor = obj.color;
-            Strength.innerHTML = `${obj.label}`;
-        }
-    }
-
-    // password strength indicator
-    const strengthIndicator = (number) => {
-        let strengths = 0;
-        if (number.length > 7) strengths += 1;
-        if (hasNumber(number)) strengths += 1;
-        if (hasSpecial(number)) strengths += 1;
-        if (hasCapital(number)) strengths += 1;
-        if (hasSmall(number)) strengths += 1;
-        if (number.length < 8) strengths = 1;
-
-        return strengths;
-    };
-
-    function ConfirmPassword() {
-        if (document.getElementById('password').value !== (document.getElementById('confirm_password').value) || document.getElementById('password').value === "") {
-            document.getElementById('confirm_password').classList.add('focus:border-red-600')
-            document.getElementById('confirm_password').classList.remove('focus:border-green-600')
-        } else {
-            document.getElementById('confirm_password').classList.add('focus:border-green-600')
-            document.getElementById('confirm_password').classList.remove('focus:border-red-600')
-        }
-    }
-    
     const [email,setEmail]=useState('');
     const [password,setPassword]=useState('');
     const {signup,isLoading,error} = useSignup();
@@ -195,9 +127,8 @@ export default function Signup() {
                                             disabled={isLoading}
                                             className="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                                         >
-                                            Sign up
+                                            {isLoading ? <Loader/>: "Sign up"}
                                         </button>
-                                        {!isLoading && <Loader/>}
                                         {error && <div className="text-slate-900 dark:text-white text-sm">{error}</div>}
                                     </form>
                                 </div>

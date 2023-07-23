@@ -16,6 +16,7 @@ import Login from "./Login";
 import useLogout from "../hooks/useLogout";
 import useAuthContext from "../hooks/useAuthContext";
 import useEditMode from "../hooks/useEditMode";
+import Profile from "./Profile";
 function timebasedindex() {
     let date = new Date();
     let millisec = date.getMilliseconds();
@@ -48,14 +49,52 @@ const AvatarMenu = () => {
     const [state, setState] = useState(false);
     const profileRef = useRef();
     const { user } = useAuthContext();
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [loading,setLoading]=useState(false);
+
+
     useEffect(() => {
         initTE({ Modal, Ripple });
     }, []);
+    
+    useEffect(()=>{
+        setSelectedImage(null);
+    },[user])
+
+    useEffect(() => {
+        const getProfilePhoto = async () => {
+            try {
+                setLoading(true);
+                console.log('i came here', user.userId);
+                const res = await axios.post(`${BASE_URL}/user/getProfilePicture_User`, {
+                    userId: user.userId
+                })
+                if(res.status===200){
+                    console.log("profile data", res);
+                    const data = res.data;
+                    setSelectedImage(data);
+                    console.log("profile url", data);
+                }else{
+                    setSelectedImage(null);
+                }
+            }
+            catch (err) {
+                if (err.response) {
+                    console.log(err.response.data);
+                }
+            }
+            setLoading(false);
+        }
+        getProfilePhoto();
+
+    }, [selectedImage, user])
+
+
 
 
     let navigation = [
-        { title: "Profile", path: "javascript:void(0)" },
-        { title: "Settings", path: "javascript:void(0)" },
+        { title: "Profile", path: "profile" },
+        // { title: "Settings", path: "javascript:void(0)" },
     ];
     if (!user) {
         navigation = [
@@ -89,10 +128,11 @@ const AvatarMenu = () => {
                     className="hidden w-10 h-10 outline-none rounded-full ring-offset-2 ring-gray-200 lg:focus:ring-2 lg:block"
                     onClick={() => setState(!state)}
                 >
-                    <img
-                        src="https://api.uifaces.co/our-content/donated/xZ4wg2Xj.jpg"
+                    {loading ? <Loader/> :<img
+                        src={selectedImage === null ? "https://api.uifaces.co/our-content/donated/xZ4wg2Xj.jpg" : `${selectedImage}`}
+                        alt=""
                         className="w-full h-full rounded-full"
-                    />
+                    />}
                 </button>
             </div>
             <ul
@@ -101,6 +141,7 @@ const AvatarMenu = () => {
             >
                 <Signup />
                 <Login />
+                <Profile newImage={selectedImage} setNewImage={setSelectedImage} setLoading={setLoading} />
                 {navigation.map((item, idx) => (
                     <li key={idx}>
                         <button
@@ -146,8 +187,8 @@ export default function Navbar() {
         { title: "Support", path: "javascript:void(0)" },
     ];
     const [submenuNav, setSubmenuNav] = useState(null); // [Blogheading,menus,CurrentMenu]
-    const [blogOwner,setBlogOwner]=useState(null);
-    const [loading,setLoading]=useState(false);
+    const [blogOwner, setBlogOwner] = useState(null);
+    const [loading, setLoading] = useState(false);
     let urlParams = useParams();
 
 
@@ -158,7 +199,7 @@ export default function Navbar() {
                 setLoading(true);
                 const res = await axios.get(`${BASE_URL}/helpdesk/${urlParams.Blogid}/getBlog`);
                 const data = await res.data;
-                console.log("otherBlogData",data);  
+                console.log("otherBlogData", data);
                 const BlogOwnerId = data[3];
                 setBlogOwner(BlogOwnerId);
                 if (res.status === 201) {
@@ -271,7 +312,8 @@ export default function Navbar() {
 
     }, [urlParams.Menuid, document.getElementById(urlParams.Menuid), darkMode])
     window.submenuNav = submenuNav;
-    // window.CurrentUser = user.userId;
+    window.CurrentUser = user && user.userId;
+    window.blogOwner=blogOwner;
 
 
     return (
@@ -287,7 +329,7 @@ export default function Navbar() {
 
                     <h1 class="text-4xl">
                         <span className="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">
-                            {loading ? <Loader/> : submenuNav !== null && submenuNav[0]}
+                            {loading ? <Loader /> : submenuNav !== null && submenuNav[0]}
                         </span>
                     </h1>
 
@@ -357,7 +399,7 @@ export default function Navbar() {
                     className={`nav-menu flex-1 pb-28 mt-8 overflow-y-auto max-h-screen lg:block lg:overflow-visible lg:pb-0 lg:mt-0 ${state ? "" : "hidden"
                         }`}
                 >
-                
+
                     <ul className="items-center space-y-6 lg:flex lg:space-x-6 lg:space-y-0">
                         {navigation.map((item, idx) => (
                             <li key={idx}>
@@ -369,7 +411,7 @@ export default function Navbar() {
                                 </a>
                             </li>
                         ))}
-                        {user &&  user.userId == blogOwner && <input
+                        {user && user.userid!==null && user.userId === blogOwner && <input
                             className="mr-2 mt-[0.3rem] h-3.5 w-8 appearance-none rounded-[0.4375rem] bg-neutral-300 before:pointer-events-none before:absolute before:h-3.5 before:w-3.5 before:rounded-full before:bg-transparent before:content-[''] after:absolute after:z-[2] after:-mt-[0.1875rem] after:h-5 after:w-5 after:rounded-full after:border-none after:bg-neutral-100 after:shadow-[0_0px_3px_0_rgb(0_0_0_/_7%),_0_2px_2px_0_rgb(0_0_0_/_4%)] after:transition-[background-color_0.2s,transform_0.2s] after:content-[''] checked:bg-primary checked:after:absolute checked:after:z-[2] checked:after:-mt-[3px] checked:after:ml-[1.0625rem] checked:after:h-5 checked:after:w-5 checked:after:rounded-full checked:after:border-none checked:after:bg-primary checked:after:shadow-[0_3px_1px_-2px_rgba(0,0,0,0.2),_0_2px_2px_0_rgba(0,0,0,0.14),_0_1px_5px_0_rgba(0,0,0,0.12)] checked:after:transition-[background-color_0.2s,transform_0.2s] checked:after:content-[''] hover:cursor-pointer focus:outline-none focus:ring-0 focus:before:scale-100 focus:before:opacity-[0.12] focus:before:shadow-[3px_-1px_0px_13px_rgba(0,0,0,0.6)] focus:before:transition-[box-shadow_0.2s,transform_0.2s] focus:after:absolute focus:after:z-[1] focus:after:block focus:after:h-5 focus:after:w-5 focus:after:rounded-full focus:after:content-[''] checked:focus:border-primary checked:focus:bg-primary checked:focus:before:ml-[1.0625rem] checked:focus:before:scale-100 checked:focus:before:shadow-[3px_-1px_0px_13px_#3b71ca] checked:focus:before:transition-[box-shadow_0.2s,transform_0.2s] dark:bg-neutral-600 dark:after:bg-neutral-400 dark:checked:bg-primary dark:checked:after:bg-primary dark:focus:before:shadow-[3px_-1px_0px_13px_rgba(255,255,255,0.4)] dark:checked:focus:before:shadow-[3px_-1px_0px_13px_#3b71ca]"
                             type="checkbox"
                             role="switch"

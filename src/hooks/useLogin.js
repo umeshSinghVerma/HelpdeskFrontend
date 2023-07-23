@@ -7,14 +7,16 @@ export default function useLogin() {
     const [error,setError] = useState(null);
     const { dispatch } = useAuthContext();
     
-    const login = async(email,password)=>{
+    const login = async(email,password,remember)=>{
         setIsLoading(true);
         setError(null);
         try{
             const res = await axios.post(`${BASE_URL}/user/login`,{email,password});
             if(res.status===200){
                 const userData = res.data;
-                localStorage.setItem('user',JSON.stringify(userData));
+                if(remember){
+                    localStorage.setItem('user',JSON.stringify(userData));
+                }
                 dispatch({type:'LOGIN',payload:userData});
                 document.getElementById('loginCloseButton').click();
             }

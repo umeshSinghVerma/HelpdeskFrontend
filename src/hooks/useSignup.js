@@ -20,7 +20,9 @@ export default function useSignup() {
             }
         }
         catch(error){
-            setError(error.response.data)
+            if(error.response){
+                setError(error.response.data)
+            }
         }
         setIsLoading(null);
     }
