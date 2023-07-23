@@ -16,7 +16,7 @@ export default function useSignup() {
                 const userData = res.data;
                 localStorage.setItem('user',JSON.stringify(userData));
                 dispatch({type:'LOGIN',payload:userData});
-                document.getElementById('signupCloseButton').close();
+                document.getElementById('signupCloseButton').click();
             }
         }
         catch(error){

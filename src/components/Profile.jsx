@@ -25,7 +25,7 @@ export default function Profile({ newImage, setNewImage, setLoading }) {
         const formData = new FormData();
         formData.append('profile', selectedImage);
         setImageChoosed(selectedImage);
-        
+
         try {
             setLoading(true);
             // console.log("profile token",user.token);
@@ -64,6 +64,15 @@ export default function Profile({ newImage, setNewImage, setLoading }) {
 
     console.log("Image choosed", imageChoosed);
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
+    let lableStyles = {};
+    if (imageChoosed !== null) {
+        lableStyles = {
+            pointerEvents: 'none',
+            cursor: "default",
+            opacity: '0.6'
+        }
+    }
+
     return RouterDOM.createPortal(
         <>
             <div
@@ -130,6 +139,8 @@ export default function Profile({ newImage, setNewImage, setLoading }) {
                                         <div {...getRootProps()} className="flex items-center justify-center w-full">
                                             <label
                                                 className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+
+                                                style={lableStyles}
                                             >
                                                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                                     <svg
@@ -164,7 +175,7 @@ export default function Profile({ newImage, setNewImage, setLoading }) {
                                                         </>}
                                                 </div>
                                             </label>
-                                            <input {...getInputProps()} id="dropzone-file" className="hidden" />
+                                            {/* {imageChoosed===null && <input {...getInputProps()} id="dropzone-file" className="hidden" disabled={imageChoosed !== null} />} */}
                                         </div>
 
                                         <form className="space-y-4 md:space-y-6" onSubmit={handleSubmit}>
