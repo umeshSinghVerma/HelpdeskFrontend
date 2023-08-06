@@ -6,6 +6,7 @@ import Accordian from './components/Accordian';
 import MainPage from './Pages/MainPage';
 import DarkmodeState from './Contexts/DarkmodeState';
 import EditModeContextProvider from './Contexts/EditModeContext';
+import { NavBarHeightContextProvider } from './Contexts/NavBarHeightContext';
 import('preline');
 
 const router = createBrowserRouter(createRoutesFromElements(
@@ -24,7 +25,9 @@ function App() {
   return (
     <DarkmodeState>
       <EditModeContextProvider>
-        <RouterProvider router={router} />
+        <NavBarHeightContextProvider>
+          <RouterProvider router={router} />
+        </NavBarHeightContextProvider>
       </EditModeContextProvider>
     </DarkmodeState>
   )

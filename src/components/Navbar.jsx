@@ -17,6 +17,7 @@ import useLogout from "../hooks/useLogout";
 import useAuthContext from "../hooks/useAuthContext";
 import useEditMode from "../hooks/useEditMode";
 import Profile from "./Profile";
+import useNavBarHeightContext from "../hooks/useNavBarHeightContext";
 function timebasedindex() {
     let date = new Date();
     let millisec = date.getMilliseconds();
@@ -50,16 +51,16 @@ const AvatarMenu = () => {
     const profileRef = useRef();
     const { user } = useAuthContext();
     const [selectedImage, setSelectedImage] = useState(null);
-    const [loading,setLoading]=useState(false);
+    const [loading, setLoading] = useState(false);
 
 
     useEffect(() => {
         initTE({ Modal, Ripple });
     }, []);
-    
-    useEffect(()=>{
+
+    useEffect(() => {
         setSelectedImage(null);
-    },[user])
+    }, [user])
 
     useEffect(() => {
         const getProfilePhoto = async () => {
@@ -69,12 +70,12 @@ const AvatarMenu = () => {
                 const res = await axios.post(`${BASE_URL}/user/getProfilePicture_User`, {
                     userId: user.userId
                 })
-                if(res.status===200){
+                if (res.status === 200) {
                     console.log("profile data", res);
                     const data = res.data;
                     setSelectedImage(data);
                     console.log("profile url", data);
-                }else{
+                } else {
                     setSelectedImage(null);
                 }
             }
@@ -128,7 +129,7 @@ const AvatarMenu = () => {
                     className="hidden w-10 h-10 outline-none rounded-full ring-offset-2 ring-gray-200 lg:focus:ring-2 lg:block"
                     onClick={() => setState(!state)}
                 >
-                    {loading ? <Loader/> :<img
+                    {loading ? <Loader /> : <img
                         src={selectedImage === null ? "https://api.uifaces.co/our-content/donated/xZ4wg2Xj.jpg" : `${selectedImage}`}
                         alt=""
                         className="w-full h-full rounded-full"
@@ -173,11 +174,11 @@ const AvatarMenu = () => {
 
 export default function Navbar() {
     const [state, setState] = useState(false);
-    const [searchParams, setSearchParams] = useSearchParams();
     const [showCreateMenu, setShowCreateMenu] = useState(false);
     const navigate = useNavigate();
     const { user } = useAuthContext();
     const { editMode, setEditMode } = useEditMode();
+    const HeaderRef = useRef(null);
     // console.log("blog came in navbar", blogData)
 
     // Replace javascript:void(0) paths with your paths
@@ -189,7 +190,27 @@ export default function Navbar() {
     const [submenuNav, setSubmenuNav] = useState(null); // [Blogheading,menus,CurrentMenu]
     const [blogOwner, setBlogOwner] = useState(null);
     const [loading, setLoading] = useState(false);
+    const {setNavbarHeight}=useNavBarHeightContext();
     let urlParams = useParams();
+
+    useEffect(() => {
+        const divElement = HeaderRef.current;
+
+        const resizeObserver = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                // console.log('Div height changed:', entry.contentRect.height);
+                setNavbarHeight(entry.contentRect.height)
+            }
+        });
+
+        if (divElement) {
+            resizeObserver.observe(divElement);
+        }
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
 
 
     // When the blog is clicked in the sidebar -->
@@ -313,13 +334,13 @@ export default function Navbar() {
     }, [urlParams.Menuid, document.getElementById(urlParams.Menuid), darkMode])
     window.submenuNav = submenuNav;
     window.CurrentUser = user && user.userId;
-    window.blogOwner=blogOwner;
+    window.blogOwner = blogOwner;
 
 
     return (
         <header
             className=" bg-white dark:bg-slate-900 z-[100] sticky top-0"
-            id="HEADER"
+            id="HEADER" ref={HeaderRef}
         >
             <div
                 className={`antialiased text-slate-500 dark:text-slate-400 dark:bg-slate-900 bg-white items-center gap-x-14 px-4 max-w-screen-xl mx-auto lg:flex lg:px-8 lg:static ${state ? "h-max fixed inset-x-0 z-50 " : ""
@@ -411,7 +432,7 @@ export default function Navbar() {
                                 </a>
                             </li>
                         ))}
-                        {user && user.userid!==null && user.userId === blogOwner && <input
+                        {user && user.userid !== null && user.userId === blogOwner && <input
                             className="mr-2 mt-[0.3rem] h-3.5 w-8 appearance-none rounded-[0.4375rem] bg-neutral-300 before:pointer-events-none before:absolute before:h-3.5 before:w-3.5 before:rounded-full before:bg-transparent before:content-[''] after:absolute after:z-[2] after:-mt-[0.1875rem] after:h-5 after:w-5 after:rounded-full after:border-none after:bg-neutral-100 after:shadow-[0_0px_3px_0_rgb(0_0_0_/_7%),_0_2px_2px_0_rgb(0_0_0_/_4%)] after:transition-[background-color_0.2s,transform_0.2s] after:content-[''] checked:bg-primary checked:after:absolute checked:after:z-[2] checked:after:-mt-[3px] checked:after:ml-[1.0625rem] checked:after:h-5 checked:after:w-5 checked:after:rounded-full checked:after:border-none checked:after:bg-primary checked:after:shadow-[0_3px_1px_-2px_rgba(0,0,0,0.2),_0_2px_2px_0_rgba(0,0,0,0.14),_0_1px_5px_0_rgba(0,0,0,0.12)] checked:after:transition-[background-color_0.2s,transform_0.2s] checked:after:content-[''] hover:cursor-pointer focus:outline-none focus:ring-0 focus:before:scale-100 focus:before:opacity-[0.12] focus:before:shadow-[3px_-1px_0px_13px_rgba(0,0,0,0.6)] focus:before:transition-[box-shadow_0.2s,transform_0.2s] focus:after:absolute focus:after:z-[1] focus:after:block focus:after:h-5 focus:after:w-5 focus:after:rounded-full focus:after:content-[''] checked:focus:border-primary checked:focus:bg-primary checked:focus:before:ml-[1.0625rem] checked:focus:before:scale-100 checked:focus:before:shadow-[3px_-1px_0px_13px_#3b71ca] checked:focus:before:transition-[box-shadow_0.2s,transform_0.2s] dark:bg-neutral-600 dark:after:bg-neutral-400 dark:checked:bg-primary dark:checked:after:bg-primary dark:focus:before:shadow-[3px_-1px_0px_13px_rgba(255,255,255,0.4)] dark:checked:focus:before:shadow-[3px_-1px_0px_13px_#3b71ca]"
                             type="checkbox"
                             role="switch"

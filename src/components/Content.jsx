@@ -17,6 +17,7 @@ import BASE_URL from '../BASE_URL';
 import PopupModel from './Signup';
 import useAuthContext from '../hooks/useAuthContext';
 import useEditMode from '../hooks/useEditMode';
+import useNavBarHeightContext from '../hooks/useNavBarHeightContext';
 
 const CssTextField = styled(TextField)({
 
@@ -98,26 +99,27 @@ export default function Content() {
     const { user } = useAuthContext();
     const { editMode } = useEditMode();
     const [loading, setLoading] = useState(false);
+    const {navbarHeight}= useNavBarHeightContext();
 
 
-    useEffect(() => {
-        function resizefn() {
-            setWidth(window.innerWidth);
-        }
-        window.addEventListener("resize", resizefn);
-        return () => {
-            window.removeEventListener("resize", resizefn);
-        };
-    }, []);
+    // useEffect(() => {
+    //     function resizefn() {
+    //         setWidth(window.innerWidth);
+    //     }
+    //     window.addEventListener("resize", resizefn);
+    //     return () => {
+    //         window.removeEventListener("resize", resizefn);
+    //     };
+    // }, []);
 
     // Observing the height of the header
-    const [navbarHeight, setNavbarHeight] = useState(0);
-    useEffect(() => {
-        if (document.getElementById('HEADER')) {
-            const element = document.getElementById('HEADER');
-            setNavbarHeight(element.offsetHeight);
-        }
-    }, [width])
+    // const [navbarHeight, setNavbarHeight] = useState(0);
+    // useEffect(() => {
+    //     if (document.getElementById('HEADER')) {
+    //         const element = document.getElementById('HEADER');
+    //         setNavbarHeight(element.offsetHeight);
+    //     }
+    // }, [width])
 
     const fetchContent = async (BlogId, MenuId) => {
         try {
